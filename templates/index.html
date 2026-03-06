@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>AI Task Planner</title>
+
+<style>
+
+body{
+font-family: Arial;
+margin:0;
+padding:20px;
+background:#f5f5f5;
+}
+
+h1{
+text-align:center;
+}
+
+.container{
+max-width:600px;
+margin:auto;
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+input,select,button{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:5px;
+border:1px solid #ccc;
+font-size:16px;
+}
+
+button{
+background:#2c7be5;
+color:white;
+border:none;
+cursor:pointer;
+}
+
+button:hover{
+background:#1a5fc2;
+}
+
+.task{
+background:#fafafa;
+border-left:5px solid #2c7be5;
+padding:10px;
+margin-top:10px;
+border-radius:5px;
+}
+
+.plan{
+background:#e8f4ff;
+padding:10px;
+margin-top:10px;
+border-radius:5px;
+}
+
+.risk{
+font-weight:bold;
+}
+
+.high{
+color:red;
+}
+
+.warning{
+color:orange;
+}
+
+.safe{
+color:green;
+}
+
+.section{
+margin-top:25px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>AI Task Planner</h1>
+
+<div class="section">
+
+<h3>Add Task</h3>
+
+<input id="title" placeholder="Task name">
+
+<input id="duration" placeholder="Duration (hours)">
+
+<input id="deadline" placeholder="Deadline YYYY-MM-DD HH:MM">
+
+<select id="preferred">
+<option value="anytime">Anytime</option>
+<option value="morning">Morning</option>
+<option value="afternoon">Afternoon</option>
+<option value="evening">Evening</option>
+<option value="night">Night</option>
+</select>
+
+<button onclick="addTask()">Add Task</button>
+
+</div>
+
+<div class="section">
+
+<h3>Today's Plan</h3>
+
+<button onclick="loadPlan()">Generate Plan</button>
+
+<div id="plan"></div>
+
+</div>
+
+<div class="section">
+
+<h3>All Tasks</h3>
+
+<button onclick="loadTasks()">Refresh Tasks</button>
+
+<div id="tasks"></div>
+
+</div>
+
+<div class="section">
+
+<h3>Priority List</h3>
+
+<button onclick="loadPriorities()">Show Priorities</button>
+
+<div id="priorities"></div>
+
+</div>
+
+</div>
+
+<script>
+
+async function addTask(){
+
+let task={
+title:document.getElementById("title").value,
+duration:parseFloat(document.getElementById("duration").value),
+deadline:document.getElementById("deadline").value,
+preferred_time:document.getElementById("preferred").value
+}
+
+await fetch("/add-task",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify(task)
+})
+
+alert("Task added")
+
+loadTasks()
+
+}
+
+async function loadTasks(){
+
+let res=await fetch("/tasks")
+let data=await res.json()
+
+let container=document.getElementById("tasks")
+
+container.innerHTML=""
+
+data.forEach(t=>{
+
+let riskClass="safe"
+
+if(t.risk=="high risk") riskClass="high"
+if(t.risk=="warning") riskClass="warning"
+
+container.innerHTML+=`
+<div class="task">
+<b>${t.title}</b><br>
+Duration: ${t.duration} hrs<br>
+Free time before deadline: ${t.free_time} hrs<br>
+<span class="risk ${riskClass}">Risk: ${t.risk}</span>
+</div>
+`
+
+})
+
+}
+
+async function loadPriorities(){
+
+let res=await fetch("/priorities")
+
+let data=await res.json()
+
+let container=document.getElementById("priorities")
+
+container.innerHTML=""
+
+data.forEach(t=>{
+
+container.innerHTML+=`
+<div class="task">
+<b>${t.title}</b><br>
+Urgency Score: ${t.urgency}<br>
+Risk: ${t.risk}
+</div>
+`
+
+})
+
+}
+
+async function loadPlan(){
+
+let res=await fetch("/today-plan")
+
+let data=await res.json()
+
+let container=document.getElementById("plan")
+
+container.innerHTML=""
+
+container.innerHTML+=`<b>Free Hours Today: ${data.today_free_hours}</b>`
+
+data.plan.forEach(p=>{
+
+container.innerHTML+=`
+<div class="plan">
+${p.task}<br>
+Work today: ${p.work_today} hrs<br>
+Remaining: ${p.remaining} hrs
+</div>
+`
+
+})
+
+}
+
+loadTasks()
+
+</script>
+
+</body>
+</html>
